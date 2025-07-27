@@ -24,7 +24,7 @@ const chatbotSend = document.getElementById('chatbotSend');
 // ======================
 // Constants
 // ======================
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_API_URL = '/api/openrouter';
 const SIMULATION_COOLDOWN = 10000; // 10 seconds
 const DISEASE_COOLDOWN = 15000; // 15 seconds
 const CHATBOT_COOLDOWN = 2000; // 2 seconds

@@ -25,8 +25,6 @@ const chatbotSend = document.getElementById('chatbotSend');
 // Constants
 // ======================
 const OPENROUTER_API_URL = '/api/openrouter';
-const TEXT_API_KEY = process.env.TEXT_API_KEY;
-const IMAGE_API_KEY = process.env.IMAGE_API_KEY;
 const SIMULATION_COOLDOWN = 10000; // 10 seconds
 const DISEASE_COOLDOWN = 15000; // 15 seconds
 const CHATBOT_COOLDOWN = 2000; // 2 seconds

@@ -1,26 +1,35 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST requests are allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const isImageRequest = req.body?.model?.startsWith('qwen/');
-  const apiKey = isImageRequest ? process.env.IMAGE_API_KEY : process.env.TEXT_API_KEY;
-
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const isImageRequest = req.body?.model?.startsWith('qwen/');
+    const apiKey = isImageRequest ? process.env.IMAGE_API_KEY : process.env.TEXT_API_KEY;
+
+    const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'X-Title': 'TAPE App'
+        'HTTP-Referer': req.headers?.referer || '',
+        'X-Title': 'TAPE - Technology Assisted Plant Emulator'
       },
       body: JSON.stringify(req.body)
     });
 
-    const data = await response.json();
-    res.status(response.status).json(data);
+    if (!openRouterResponse.ok) {
+      const errorData = await openRouterResponse.json();
+      throw new Error(errorData.error?.message || 'API request failed');
+    }
+
+    const data = await openRouterResponse.json();
+    res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Server error: ' + error.message });
+    console.error('OpenRouter API error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
   }
 }
-

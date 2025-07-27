@@ -94,7 +94,7 @@ p {
 /* ====================== */
 .container {
     width: 100%;
-    max-width: 1500px;
+    max-width: 2000px;
     margin: 0 auto;
     padding: 0 20px;
 }
@@ -226,7 +226,7 @@ nav {
 /* ====================== */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 2rem;
     margin: 2rem 0;
 }
@@ -998,4 +998,11 @@ footer {
 
 .full-timeline {
     margin-top: 0.5rem;
+}
+
+.team-video {
+    width: 480px;
+    height: 300px;
+    display: flex;
+    text-align: center;
 }

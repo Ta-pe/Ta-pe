@@ -145,60 +145,33 @@ function debounce(func, timeout = 500) {
 // ======================
 
 async function fetchPlantVarieties(plantName) {
-    if (!plantName || plantName.length < 3) {
-        return ["Standard"];
-    }
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: "anthropic/claude-3-sonnet",
+        messages: [
+          {
+            role: "system",
+            content: `You are a botanical database API. Return ONLY a JSON array of 3-5 common varieties for the requested plant. Example: ["Variety A", "Variety B"]. If the plant has no common varieties or is unknown, return ["Standard"]. Always return valid JSON.`
+          },
+          {
+            role: "user",
+            content: `List varieties for: ${plantName}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 100
+      })
+    });
 
-    try {
-        const response = await fetch(OPENROUTER_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${TEXT_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'TAPE - Technology Assisted Plant Emulator'
-            },
-            body: JSON.stringify({
-                model: "anthropic/claude-3-sonnet",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are a botanical database API. Return ONLY a JSON array of 3-5 common varieties for the requested plant. Example: ["Variety A", "Variety B"]. If the plant has no common varieties or is unknown, return ["Standard"]. Always return valid JSON.`
-                    },
-                    {
-                        role: "user",
-                        content: `List varieties for: ${plantName}`
-                    }
-                ],
-                temperature: 0.3,
-                max_tokens: 100
-            }),
-            signal: AbortSignal.timeout(5000) // 5-second timeout
-        });
-
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        
-        if (!content) {
-            return ["Standard"];
-        }
-
-        try {
-            const cleanedContent = content.replace(/```json|```/g, '').trim();
-            const varieties = JSON.parse(cleanedContent);
-            return Array.isArray(varieties) && varieties.length > 0 ? varieties.slice(0, 5) : ["Standard"];
-        } catch (e) {
-            console.error('Failed to parse varieties:', e);
-            return ["Standard"];
-        }
-    } catch (error) {
-        console.error('Variety fetch error:', error);
-        return ["Standard"];
-    }
+    const data = await response.json();
+    return JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
+  } catch (error) {
+    console.error('Variety fetch error:', error);
+    return ["Standard"];
+  }
 }
 
 function createVarietyDropdown(varieties) {
@@ -231,101 +204,40 @@ function createVarietyDropdown(varieties) {
 // Disease Analysis Functions
 // ======================
 
-async function analyzePlantDisease(imageFile, plantType, symptoms) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            try {
-                const base64String = event.target.result;
-                const result = await analyzeWithQwenVL(base64String, plantType, symptoms);
-                resolve(result);
-            } catch (error) {
-                reject(error);
-            }
-        };
-        reader.onerror = () => reject(new Error('Failed to read image file'));
-        reader.readAsDataURL(imageFile);
-    });
-}
-
 async function analyzeWithQwenVL(imageBase64, plantType, symptoms) {
-    try {
-        const response = await fetch(OPENROUTER_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${IMAGE_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'TAPE - Plant Disease Detection'
-            },
-            body: JSON.stringify({
-                model: "qwen/qwen-vl-plus",
-                messages: [
-                    {
-                        role: "system",
-                        content: `You are a plant pathologist AI. Analyze the provided plant image and:
-1. First identify the plant species if not provided
-2. Detect any visible diseases or health issues
-3. Provide a clear diagnosis with confidence level (High/Medium/Low)
-4. List specific symptoms observed in the image
-5. Recommend immediate treatment steps
-6. Suggest prevention measures
-7. Include severity assessment (Mild/Moderate/Severe)
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: "qwen/qwen-vl-plus",
+        messages: [
+          {
+            role: "system",
+            content: `You are a plant pathologist AI. Analyze the provided plant image and provide a diagnosis.`
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Analyze this ${plantType || 'plant'} image. Symptoms: ${symptoms || 'none reported'}`
+              },
+              {
+                type: "image_url",
+                image_url: imageBase64
+              }
+            ]
+          }
+        ]
+      })
+    });
 
-Format your response as follows:
-**Plant Identification**: [plant name if not provided]
-**Diagnosis**: [disease/issue name] (Confidence: [High/Medium/Low])
-**Symptoms**: 
-- [symptom 1]
-- [symptom 2]
-- [etc.]
-**Treatment**:
-- [step 1]
-- [step 2]
-- [etc.]
-**Prevention**:
-- [measure 1]
-- [measure 2]
-- [etc.]
-**Severity**: [Mild/Moderate/Severe]
-**Additional Notes**: [any important notes]`
-                    },
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: `Analyze this ${plantType ? plantType + ' plant' : 'plant'} image. ${symptoms ? 'Reported symptoms: ' + symptoms : 'No additional symptoms reported.'}`
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: imageBase64,
-                                    detail: "high"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 2000
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API Error: ${errorData.error?.message || response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data?.choices?.[0]?.message?.content) {
-            throw new Error("Received incomplete data from the API");
-        }
-
-        return data.choices[0].message.content;
-    } catch (error) {
-        throw new Error(`Analysis failed: ${error.message}`);
-    }
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    throw new Error(`Analysis failed: ${error.message}`);
+  }
 }
 
 // ======================
@@ -333,68 +245,32 @@ Format your response as follows:
 // ======================
 
 async function runPlantSimulation(formData) {
-    resultBox.innerHTML = `
-        <div class="simulation-loading">
-            <i class="fas fa-seedling pulse"></i>
-            <p>Simulating ${formData.plantType}'s growth patterns...</p>
-            <small>Analyzing ${formData.soilType} soil with ${formData.sunlight} light</small>
-        </div>
-    `;
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: "openai/gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are a plant growth simulation AI. Provide detailed, scientifically accurate predictions formatted with markdown-style headings and lists. Always include specific numbers and timelines."
+          },
+          {
+            role: "user",
+            content: `Simulate growth for: ${JSON.stringify(formData)}`
+          }
+        ],
+        temperature: 0.7
+      })
+    });
 
-    try {
-        const prompt = `
-You are a plant growth simulation AI for the Technology Assisted Plant Emulator (TAPE). Provide a detailed, scientifically accurate prediction of the growth outcomes for the specified plant under the given conditions. Format the response in markdown with clear headings (##) and bullet points (-) for each section. Include specific numbers, timelines, and care recommendations. If the conditions are suboptimal, highlight potential issues with a warning (!). Structure the response as follows:
-
-1. **Overview**: Summarize the plant and conditions.
-2. **Growth Prediction**: Predict growth rate, expected height, and time to maturity.
-3. **Environmental Analysis**: Assess suitability of temperature, humidity, soil, sunlight, and watering.
-4. **Care Recommendations**: Provide actionable advice to optimize growth.
-5. **Potential Issues**: Highlight any risks or challenges based on the inputs.
-
-**Input Parameters**:
-- Plant Type: ${formData.plantType}
-- Variety: ${formData.plantVariety || 'Standard'}
-- Placement: ${formData.placement}
-- Soil Type: ${formData.soilType}
-- Watering Schedule: ${formData.watering}
-- Sunlight Exposure: ${formData.sunlight}
-- Temperature Range: ${formData.temperature}°C
-- Humidity: ${formData.humidity}
-- Growth Stage: ${formData.growthStage}
-- Additional Notes: ${formData.notes}
-
-Provide a concise yet detailed response (200-400 words) with specific timelines (e.g., weeks/months) and measurements (e.g., cm/inches).
-        `;
-
-        const response = await fetch(OPENROUTER_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${TEXT_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'TAPE - Technology Assisted Plant Emulator'
-            },
-            body: JSON.stringify({
-                model: "openai/gpt-3.5-turbo",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a plant growth simulation AI. Provide detailed, scientifically accurate predictions formatted with markdown-style headings and lists. Always include specific numbers and timelines.Give me text with no extra spaces."
-                    },
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ],
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error?.message || `API error: ${response.status}`);
-        }
-
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    throw new Error(`Simulation failed: ${error.message}`);
+  }
+}
         const data = await response.json();
         if (!data.choices?.[0]?.message?.content) {
             throw new Error('Invalid API response: No content received');

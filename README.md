@@ -1,4 +1,6 @@
 # TAPE - Technology Assisted Plant Emulator
+Grades 9 
+Names-Rajbin Karki, Abhigya Bhandari , Adiksh Silwal
 
 TAPE is an AI-powered web application that helps users simulate plant growth and detect plant diseases. It provides personalized recommendations for plant care based on environmental factors and visual symptoms.
 

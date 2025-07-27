@@ -24,6 +24,8 @@ const chatbotSend = document.getElementById('chatbotSend');
 // ======================
 // Constants
 // ======================
+const TEXT_API_KEY = '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';
+const IMAGE_API_KEY = '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';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const SIMULATION_COOLDOWN = 10000; // 10 seconds
 const DISEASE_COOLDOWN = 15000; // 15 seconds
